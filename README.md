@@ -50,19 +50,22 @@ public class ContextTestClass {
 
 }
 
-@SmartClassService(value = "com.example.RequestTestClass", context = "com.example.ContextTestClass")
+@SmartClassService(value = "com.example.RequestTestClass", 
+                   context = "com.example.ContextTestClass")
 @Service
 public class TestService {
 
     @SmartClassMethod("entityA")
-    public void EntityA(RequestTestClass.EntityTest entity, ContextTestClass context) {
+    public void EntityA(RequestTestClass.EntityTest entity, 
+                        ContextTestClass context) {
         log.info("EntA");
         context.iteration++;
     }
 
 
     @SmartClassMethod("entityB")
-    public void EntityB(RequestTestClass.EntityTest entity, ContextTestClass context) {
+    public void EntityB(RequestTestClass.EntityTest entity, 
+                        ContextTestClass context) {
         log.info("EntB");
         context.iteration++;
     }
@@ -82,7 +85,9 @@ public class Application implements CommandLineRunner {
 
     @Override
     public void run(String... strings) throws Exception {
-        ContextTestClass resp = (ContextTestClass)classService.execute(new RequestTestClass(), new ContextTestClass());
+        ContextTestClass resp = 
+            (ContextTestClass)classService.execute(new RequestTestClass(), 
+                                                   new ContextTestClass());
         System.out.println("Iterations:" + resp.getIteration());
     }
 }
