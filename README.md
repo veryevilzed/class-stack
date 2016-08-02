@@ -18,7 +18,9 @@ maven:
 
 usage:
 
-```
+```java
+
+package com.example;
 
 public class RequestTestClass {
 
