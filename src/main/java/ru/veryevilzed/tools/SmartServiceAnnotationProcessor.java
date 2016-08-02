@@ -2,9 +2,7 @@ package ru.veryevilzed.tools;
 
 import com.squareup.javapoet.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.remoting.rmi.CodebaseAwareObjectInputStream;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import javax.annotation.processing.*;
 import javax.lang.model.element.*;
@@ -22,12 +20,10 @@ import java.util.*;
 public class SmartServiceAnnotationProcessor extends AbstractProcessor {
 
     final static String SCS_TYPE = "ru.veryevilzed.tools.SmartClassService";
-    final static String SCM_TYPE = "ru.veryevilzed.tools.SmartClassMethod";
 
     Filer filer;
     Messager messager;
     private ElementTypePair smartClassServiceType;
-    private ElementTypePair smartClassMethodType;
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -35,7 +31,6 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
         this.filer = processingEnv.getFiler();
         this.messager = processingEnv.getMessager();
         this.smartClassServiceType = getType(SCS_TYPE);
-        this.smartClassMethodType = getType(SCM_TYPE);
     }
 
     private Types typeUtils() {
@@ -55,20 +50,6 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
         return false;
     }
 
-
-//    private List<String> createPath(String target, TypeElement element) {
-//        List<String> path = new ArrayList<>();
-//        path.addAll(Arrays.asList(target.split("\\."));
-//        return createPath(path, element);
-//    }
-//
-//    private List<String> createPath(List<String> path, TypeElement element) {
-//        for(ExecutableElement e : ElementFilter.methodsIn(element.getEnclosedElements())){
-//            if (e.getSimpleName().toString().startsWith("get"+path.get(0))){
-//                return
-//            }
-//        }
-//    }
 
     private CodeBlock createIfPath(String path, String prefix) {
 
@@ -97,17 +78,16 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
     private void checkSmartClassServiceAnnotatedElement(RoundEnvironment roundEnv){
         Set<? extends Element> entityAnnotated =
                 roundEnv.getElementsAnnotatedWith(smartClassServiceType.element);
-        // technically, we don't need to filter here, but it gives us a free cast
+
 
         List<ExecutableServiceElement> executableServiceElements = new ArrayList<>();
 
         for (TypeElement typeElement : ElementFilter.typesIn(entityAnnotated)) {
-            System.out.println("Element: " + typeElement.getSimpleName());
-
+            messager.printMessage(Diagnostic.Kind.NOTE, "Build Service for " + typeElement.getSimpleName());
             SmartClassService serviceAnnotation = typeElement.getAnnotation(SmartClassService.class);
-            System.out.println("Annotation is: " + serviceAnnotation.value());
             // Находим методы
             for (ExecutableElement executableElement : ElementFilter.methodsIn(typeElement.getEnclosedElements())) {
+                messager.printMessage(Diagnostic.Kind.NOTE, "  found method " + executableElement.getSimpleName());
                 SmartClassMethod methodAnnotation = executableElement.getAnnotation(SmartClassMethod.class);
                 if (methodAnnotation == null)
                     continue;
@@ -129,10 +109,11 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
     }
 
     private void buildService(List<ExecutableServiceElement> elements) throws IOException {
-        System.out.println("Build Services: " + elements.size());
         TypeSpec.Builder serviceBuilder = TypeSpec.classBuilder("ClassServiceImpl")
                 .addModifiers(Modifier.PUBLIC)
+                .addSuperinterface(ClassService.class)
                 .addAnnotation(Service.class);
+
         if (elements.size() == 0)
             return;
 
@@ -140,9 +121,15 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
         Map<String, MethodSpec.Builder> methods = new HashMap<>();
         Set<Name> services = new HashSet<>();
 
+        MethodSpec.Builder commonMethod = MethodSpec.methodBuilder("execute")
+                .addModifiers(Modifier.PUBLIC)
+                .addParameter(Object.class, "incoming")
+                .addParameter(Object.class, "context")
+                .returns(Object.class);
+
+
         for (ExecutableServiceElement element : elements) {
             if (!services.contains(element.typeElement.getSimpleName())) {
-                System.out.println("Add autowired for: " + element.fieldServiceName() + " " + ClassName.get(element.typeElement));
                 services.add(element.typeElement.getSimpleName());
                 serviceBuilder.addField(
                         FieldSpec.builder(ClassName.get(element.typeElement), element.fieldServiceName())
@@ -150,27 +137,22 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
                                 .build()
                 );
             }
-            System.out.println("Ready for create methods:" + element.serviceAnnotation.value());
 
             ElementTypePair valueTypePair = getType(element.serviceAnnotation.value());
             ElementTypePair contextTypePair = getType(element.serviceAnnotation.context());
 
-
-
             if (!methods.containsKey(element.serviceAnnotation.value())){
-
-                System.out.println("Add method for: " + element.serviceAnnotation);
-
-                MethodSpec.Builder methodSpecBuilder = MethodSpec.methodBuilder("execute")
+                MethodSpec.Builder methodSpecBuilder = MethodSpec.methodBuilder("namedExecute")
                         .addModifiers(Modifier.PUBLIC)
                         .returns(ClassName.get(contextTypePair.element))
                         .addParameter(ClassName.get(valueTypePair.element), "incoming")
                         .addParameter(ClassName.get(contextTypePair.element), "context");
 
                 methods.put(element.serviceAnnotation.value(), methodSpecBuilder);
-            }
 
-            System.out.println("GetMethodBuilder");
+                commonMethod.addCode("if (incoming instanceof $T && context instanceof $T) return namedExecute(($T)incoming, ($T)context);\n", valueTypePair.element, contextTypePair.element, valueTypePair.element, contextTypePair.element);
+
+            }
 
             MethodSpec.Builder methodSpecBuilder = methods.get(element.serviceAnnotation.value());
 
@@ -187,6 +169,7 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
         for (MethodSpec.Builder method : methods.values())
             serviceBuilder.addMethod(method.addCode("return context;\n").build());
 
+        serviceBuilder.addMethod(commonMethod.addCode("return context;\n").build());
 
         JavaFile javaFile = JavaFile.builder("ru.veryevilzed.tools", serviceBuilder.build())
                 .build();
