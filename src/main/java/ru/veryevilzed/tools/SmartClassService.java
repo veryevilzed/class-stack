@@ -11,6 +11,6 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.SOURCE)
 public @interface SmartClassService {
-    String value();
+    String incoming();
     String context() default "";
 }

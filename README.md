@@ -50,7 +50,7 @@ public class ContextTestClass {
 
 }
 
-@SmartClassService(value = "com.example.RequestTestClass", 
+@SmartClassService(incoming = "com.example.RequestTestClass", 
                    context = "com.example.ContextTestClass")
 @Service
 public class TestService {

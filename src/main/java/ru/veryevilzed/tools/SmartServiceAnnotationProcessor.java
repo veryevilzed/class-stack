@@ -138,23 +138,23 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
                 );
             }
 
-            ElementTypePair valueTypePair = getType(element.serviceAnnotation.value());
+            ElementTypePair incomingTypePair = getType(element.serviceAnnotation.incoming());
             ElementTypePair contextTypePair = getType(element.serviceAnnotation.context());
 
-            if (!methods.containsKey(element.serviceAnnotation.value())){
+            if (!methods.containsKey(element.serviceAnnotation.incoming())){
                 MethodSpec.Builder methodSpecBuilder = MethodSpec.methodBuilder("namedExecute")
                         .addModifiers(Modifier.PUBLIC)
                         .returns(ClassName.get(contextTypePair.element))
-                        .addParameter(ClassName.get(valueTypePair.element), "incoming")
+                        .addParameter(ClassName.get(incomingTypePair.element), "incoming")
                         .addParameter(ClassName.get(contextTypePair.element), "context");
 
-                methods.put(element.serviceAnnotation.value(), methodSpecBuilder);
+                methods.put(element.serviceAnnotation.incoming(), methodSpecBuilder);
 
-                commonMethod.addCode("if (incoming instanceof $T && context instanceof $T) return namedExecute(($T)incoming, ($T)context);\n", valueTypePair.element, contextTypePair.element, valueTypePair.element, contextTypePair.element);
+                commonMethod.addCode("if (incoming instanceof $T && context instanceof $T) return namedExecute(($T)incoming, ($T)context);\n", incomingTypePair.element, contextTypePair.element, incomingTypePair.element, contextTypePair.element);
 
             }
 
-            MethodSpec.Builder methodSpecBuilder = methods.get(element.serviceAnnotation.value());
+            MethodSpec.Builder methodSpecBuilder = methods.get(element.serviceAnnotation.incoming());
 
 
             methodSpecBuilder.addCode(createIfPath(element.methodAnnotation.value(), "incoming"));
