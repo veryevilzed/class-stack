@@ -1,6 +1,7 @@
 package ru.veryevilzed.tools;
 
 /**
+ * Единый интерфейс доступа к сервисам
  * Created by zed on 02.08.16.
  */
 public interface ClassService {

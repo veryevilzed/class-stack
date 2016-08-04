@@ -51,7 +51,7 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
     }
 
 
-    private CodeBlock createIfPath(String path, String prefix) {
+    private CodeBlock createIfPath(String path, String prefix, boolean isBoolean) {
 
 
         String[] args = path.split("\\.");
@@ -63,12 +63,17 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
                 _args.add(args[j]);
 
 
+            String d = "!= null";
+
+
+            if (isBoolean && i == args.length-1)
+                d = "";
 
             if (res == null) {
                 res = CodeBlock.builder();
-                res.add("if ($L.$L != null", prefix, String.join(".", _args));
+                res.add("if ($L.$L $L", prefix, String.join(".", _args), d);
             }else{
-                res.add(" && $L.$L != null", prefix, String.join(".", _args));
+                res.add(" && $L.$L $L", prefix, String.join(".", _args), d);
             }
         }
         res.add(")");
@@ -156,14 +161,21 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
 
             MethodSpec.Builder methodSpecBuilder = methods.get(element.serviceAnnotation.incoming());
 
+            if (element.methodAnnotation.isBoolean()){
+                methodSpecBuilder.addCode(createIfPath(element.methodAnnotation.value(), "incoming", true));
+                methodSpecBuilder.addCode(" $L.$L(context);\n",
+                        element.fieldServiceName(),
+                        element.executableElement.getSimpleName()
+                );
 
-            methodSpecBuilder.addCode(createIfPath(element.methodAnnotation.value(), "incoming"));
-
-            methodSpecBuilder.addCode(" $L.$L(incoming.$L, context);\n",
-                    element.fieldServiceName(),
-                    element.executableElement.getSimpleName(),
-                    element.methodAnnotation.value()
-                    );
+            }else {
+                methodSpecBuilder.addCode(createIfPath(element.methodAnnotation.value(), "incoming", false));
+                methodSpecBuilder.addCode(" $L.$L(incoming.$L, context);\n",
+                        element.fieldServiceName(),
+                        element.executableElement.getSimpleName(),
+                        element.methodAnnotation.value()
+                );
+            }
         }
 
         for (MethodSpec.Builder method : methods.values())

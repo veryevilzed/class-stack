@@ -6,11 +6,23 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * Помечает класс для регистрации в сервисе class-stack
  * Created by zed on 02.08.16.
  */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.SOURCE)
 public @interface SmartClassService {
+
+    /**
+     * Имя класса вместе с пакетом
+     * @return Имя класса вместе с пакетом
+     */
     String incoming();
-    String context() default "";
+
+    /**
+     * Контекстный класс
+     * @return Контекстный класс (default java.lang.Object)
+     */
+    String context() default "java.lang.Object";
+
 }
