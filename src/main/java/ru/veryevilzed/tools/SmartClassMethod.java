@@ -23,4 +23,10 @@ public @interface SmartClassMethod {
      * @return false
      */
     boolean isBoolean() default false;
+
+    /**
+     * Сравнивает аргумент
+     * @return Сравнивает аргумент
+     */
+    String equals() default "";
 }
