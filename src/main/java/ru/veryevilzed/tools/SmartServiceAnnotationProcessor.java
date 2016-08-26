@@ -166,9 +166,13 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
 
             // Method params
             List<String> args = new ArrayList<>();
+
             for(VariableElement te : element.executableElement.getParameters()){
-                if (te.asType() == incomingTypePair.element.asType())
+                System.out.println(" --> " + te.asType() + " " + incomingTypePair.element.asType());
+
+                if (te.asType() != contextTypePair.element.asType())
                     args.add("incoming.$L");
+
                 if (te.asType() == contextTypePair.element.asType())
                     args.add("context");
             }
@@ -183,12 +187,20 @@ public class SmartServiceAnnotationProcessor extends AbstractProcessor {
 
             }else {
                 methodSpecBuilder.addCode(createIfPath(element.methodAnnotation.value(), "incoming", false, element.methodAnnotation.equals()));
-                methodSpecBuilder.addCode(" $L.$L($L);\n",
-                        element.fieldServiceName(),
-                        element.executableElement.getSimpleName(),
-                        //element.methodAnnotation.value()
-                        String.join(", ", args)
-                );
+                if (args.size() == 1)
+                    methodSpecBuilder.addCode(" $L.$L($L);\n",
+                            element.fieldServiceName(),
+                            element.executableElement.getSimpleName(),
+                            //element.methodAnnotation.value()
+                            String.join(", ", args)
+                    );
+                else if (args.size() == 2) {
+                    methodSpecBuilder.addCode(" $L.$L(incoming.$L, context);\n",
+                            element.fieldServiceName(),
+                            element.executableElement.getSimpleName(),
+                            element.methodAnnotation.value()
+                    );
+                }
             }
         }
 
